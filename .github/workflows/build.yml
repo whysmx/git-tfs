@@ -1,0 +1,77 @@
+name: Build
+
+on:
+  push:
+    branches: [ master, develop ]
+  pull_request:
+    branches: [ master, develop ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET Framework
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: |
+          6.x
+          7.x
+          8.x
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/paket.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Install Paket
+      run: |
+        cd src
+        .\paket.exe install
+
+    - name: Build project
+      run: |
+        cd src
+        .\build.ps1 -Target Build -Configuration Release
+
+    - name: Run tests
+      run: |
+        cd src
+        .\build.ps1 -Target Test -Configuration Release
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      if: success()
+      with:
+        name: git-tfs-build
+        path: |
+          src/GitTfs/bin/Release/net48/
+          src/GitTfs.Vs2015/bin/Release/net48/
+          src/GitTfs.Vs2017/bin/Release/net48/
+          src/GitTfs.Vs2019/bin/Release/net48/
+          src/GitTfs.Vs2022/bin/Release/net48/
+
+    - name: Create release package
+      run: |
+        cd src
+        .\build.ps1 -Target Package -Configuration Release
+      if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+
+    - name: Upload release artifacts
+      uses: actions/upload-artifact@v4
+      if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+      with:
+        name: git-tfs-release
+        path: |
+          src/build/GitTfs-*.zip

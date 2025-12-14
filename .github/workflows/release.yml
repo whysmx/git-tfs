@@ -1,0 +1,143 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+env:
+  DOTNET_VERSION: '8.x'
+  CONFIGURATION: Release
+
+jobs:
+  build:
+    name: Build and Release
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ github.ref }}
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/paket.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Install Paket
+      run: |
+        cd src
+        .\paket.exe install
+      shell: pwsh
+
+    - name: Build project
+      run: |
+        cd src
+        .\build.ps1 -Target Build -Configuration ${{ env.CONFIGURATION }}
+      shell: pwsh
+
+    - name: Run tests
+      run: |
+        cd src
+        .\build.ps1 -Target Test -Configuration ${{ env.CONFIGURATION }}
+      shell: pwsh
+
+    - name: Create release package
+      run: |
+        cd src
+        .\build.ps1 -Target Package -Configuration ${{ env.CONFIGURATION }}
+      shell: pwsh
+
+    - name: Create ZIP package for distribution
+      run: |
+        cd src
+        $version = $env:GITHUB_REF_NAME -replace 'v', ''
+        $zipName = "GitTfs-$version.zip"
+        Compress-Archive -Path "build\GitTfs-$version\*" -DestinationPath $zipName -Force
+        Write-Host "Created package: $zipName"
+      shell: pwsh
+
+    - name: Extract version from tag
+      id: version
+      run: |
+        $version = $env:GITHUB_REF_NAME -replace 'v', ''
+        echo "value=$version" >> $env:GITHUB_OUTPUT
+      shell: pwsh
+      env:
+        GITHUB_REF_NAME: ${{ github.ref_name }}
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref_name }}
+        release_name: Release ${{ steps.version.outputs.value }}
+        body: |
+          ## Changes in this release
+
+          Please see the [CHANGELOG](CHANGELOG.md) for details.
+
+          ## Installation
+
+          Download the ZIP file below and extract it. Add the extracted folder to your PATH.
+
+          ## Requirements
+
+          - .NET Framework 4.8 or later
+          - Visual Studio 2012/2013 or Team Explorer (for TFS connectivity)
+
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Assets
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: src/GitTfs-${{ steps.version.outputs.value }}.zip
+        asset_name: GitTfs-${{ steps.version.outputs.value }}.zip
+        asset_content_type: application/zip
+
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: git-tfs-build-${{ steps.version.outputs.value }}
+        path: |
+          src/build/GitTfs-${{ steps.version.outputs.value }}/
+          src/GitTfs-${{ steps.version.outputs.value }}.zip
+        retention-days: 30
+
+    - name: Upload NuGet packages (if any)
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: git-tfs-nuget-${{ steps.version.outputs.value }}
+        path: |
+          src/**/*.nupkg
+        retention-days: 30
+
+    - name: Build Summary
+      run: |
+        Write-Host "==============================================="
+        Write-Host "Build completed successfully!"
+        Write-Host "Version: ${{ steps.version.outputs.value }}"
+        Write-Host "Tag: ${{ github.ref_name }}"
+        Write-Host "Release: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
+        Write-Host "==============================================="
+      shell: pwsh
