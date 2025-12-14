@@ -61,14 +61,25 @@ jobs:
         .\build.ps1 -Target Package -Configuration ${{ env.CONFIGURATION }}
       shell: pwsh
 
-    - name: Create ZIP package for distribution
+    - name: Find Cake-generated ZIP package
+      id: find_zip
       run: |
         cd src
         $version = $env:GITHUB_REF_NAME -replace 'v', ''
-        $zipName = "GitTfs-$version.zip"
-        Compress-Archive -Path "build\GitTfs-$version\*" -DestinationPath $zipName -Force
-        Write-Host "Created package: $zipName"
+        # Cake generates ZIP in .build directory with format GitTfs-version.zip
+        $zipPath = ".build\GitTfs-$version.zip"
+        if (Test-Path $zipPath) {
+          Write-Host "Found Cake-generated ZIP: $zipPath"
+          echo "zip_path=$zipPath" >> $env:GITHUB_OUTPUT
+          echo "zip_name=GitTfs-$version.zip" >> $env:GITHUB_OUTPUT
+        } else {
+          Write-Host "Cake-generated ZIP not found, listing .build directory:"
+          Get-ChildItem .build -Recurse | Out-String
+          throw "Cake-generated ZIP not found at $zipPath"
+        }
       shell: pwsh
+      env:
+        GITHUB_REF_NAME: ${{ github.ref_name }}
 
     - name: Extract version from tag
       id: version
@@ -110,8 +121,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: src/GitTfs-${{ steps.version.outputs.value }}.zip
-        asset_name: GitTfs-${{ steps.version.outputs.value }}.zip
+        asset_path: src/${{ steps.find_zip.outputs.zip_path }}
+        asset_name: ${{ steps.find_zip.outputs.zip_name }}
         asset_content_type: application/zip
 
     - name: Upload Build Artifacts
@@ -119,8 +130,7 @@ jobs:
       with:
         name: git-tfs-build-${{ steps.version.outputs.value }}
         path: |
-          src/build/GitTfs-${{ steps.version.outputs.value }}/
-          src/GitTfs-${{ steps.version.outputs.value }}.zip
+          src/${{ steps.find_zip.outputs.zip_path }}
         retention-days: 30
 
     - name: Upload NuGet packages (if any)
