@@ -5,7 +5,7 @@ This is a Powershell script to bootstrap a Cake build.
 
 .DESCRIPTION
 This Powershell script will download NuGet if missing, restore NuGet tools (including Cake)
-and execute your Cake build script with the parameters you provide.
+and execute your Cake build script with the parameters you provide. Releases are built in CI (GitHub Actions); do not run this script locally to publish a release—push a `vX.Y.Z` tag instead.
 
 .PARAMETER Script
 The build script to execute.

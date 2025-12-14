@@ -2,6 +2,8 @@
 
 This repository uses GitHub Actions for automated building and releasing.
 
+> Note: Releases are built **online by GitHub Actions**. Do not try to publish by running `src\build.ps1` locally; push a `vX.Y.Z` tag (or use `scripts\release.ps1`) to trigger the release pipeline.
+
 ## Release Build Workflow
 
 When you push a version tag (format: `vX.Y.Z`), GitHub Actions will automatically:

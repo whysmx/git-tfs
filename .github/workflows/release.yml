@@ -61,6 +61,21 @@ jobs:
         .\build.ps1 -Target Package -Configuration ${{ env.CONFIGURATION }}
       shell: pwsh
 
+    - name: Find GitTfs executable
+      id: find_exe
+      run: |
+        # Locate the main GitTfs.exe produced by the build
+        $exe = Get-ChildItem -Path "src/GitTfs/bin/${{ env.CONFIGURATION }}/net48" -Filter "GitTfs.exe" -Recurse | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        if (-not $exe) {
+          Write-Host "GitTfs.exe not found under src/GitTfs/bin/${{ env.CONFIGURATION }}/net48"
+          Get-ChildItem -Path "src/GitTfs/bin" -Recurse | Select-String "GitTfs.exe" -ErrorAction SilentlyContinue
+          throw "GitTfs.exe missing"
+        }
+        $relativePath = $exe.FullName.Replace("$PWD\", "")
+        echo "exe_path=$relativePath" >> $env:GITHUB_OUTPUT
+        echo "exe_name=$($exe.Name)" >> $env:GITHUB_OUTPUT
+      shell: pwsh
+
     - name: Find Cake-generated ZIP package
       id: find_zip
       run: |
@@ -126,12 +141,30 @@ jobs:
         asset_name: ${{ steps.find_zip.outputs.zip_name }}
         asset_content_type: application/zip
 
+    - name: Upload GitTfs.exe
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ${{ steps.find_exe.outputs.exe_path }}
+        asset_name: ${{ steps.find_exe.outputs.exe_name }}
+        asset_content_type: application/octet-stream
+
     - name: Upload Build Artifacts
       uses: actions/upload-artifact@v4
       with:
         name: git-tfs-build-${{ steps.version.outputs.value }}
         path: |
           ${{ steps.find_zip.outputs.zip_path }}
+        retention-days: 30
+
+    - name: Upload GitTfs.exe Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: git-tfs-exe-${{ steps.version.outputs.value }}
+        path: |
+          ${{ steps.find_exe.outputs.exe_path }}
         retention-days: 30
 
     - name: Upload NuGet packages (if any)
