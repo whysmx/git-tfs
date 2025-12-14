@@ -52,7 +52,7 @@ jobs:
     - name: Run tests
       run: |
         cd src
-        .\build.ps1 -Target Test -Configuration ${{ env.CONFIGURATION }}
+        .\build.ps1 -Target Run-Unit-Tests -Configuration ${{ env.CONFIGURATION }}
       shell: pwsh
 
     - name: Create release package

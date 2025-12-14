@@ -48,7 +48,7 @@ jobs:
     - name: Run tests
       run: |
         cd src
-        .\build.ps1 -Target Test -Configuration Release
+        .\build.ps1 -Target Run-Unit-Tests -Configuration Release
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
