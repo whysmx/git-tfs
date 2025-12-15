@@ -20,7 +20,7 @@
 # ==============================================================================
 
 mode: ContinuousDeployment
-tag: useBranchName
+tag: ''
 increment: Inherit
 prevent-increment-of-merged-when-label: true
 track-merge-target: true
