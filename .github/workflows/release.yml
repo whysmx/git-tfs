@@ -21,6 +21,13 @@ jobs:
         fetch-depth: 0
         ref: master
 
+    - name: Override GitVersion branch
+      run: |
+        # Force GitVersion to use master branch even when triggered by tag
+        echo "GITVERSION_BRANCH=master" >> $env:GITHUB_ENV
+        echo "GITVERSION_SHA=${{ github.sha }}" >> $env:GITHUB_ENV
+      shell: pwsh
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
@@ -46,6 +53,9 @@ jobs:
     - name: Build project
       run: |
         cd src
+        # Force GitVersion to use master branch
+        $env:GITVERSION_BRANCH = "master"
+        $env:GITVERSION_SHA = "${{ github.sha }}"
         .\build.ps1 -Target Build -Configuration ${{ env.CONFIGURATION }}
       shell: pwsh
 
@@ -58,6 +68,9 @@ jobs:
     - name: Create release package
       run: |
         cd src
+        # Force GitVersion to use master branch
+        $env:GITVERSION_BRANCH = "master"
+        $env:GITVERSION_SHA = "${{ github.sha }}"
         .\build.ps1 -Target Package -Configuration ${{ env.CONFIGURATION }}
       shell: pwsh
 
@@ -87,7 +100,8 @@ jobs:
           $zipName = $zipFiles[0].Name
           Write-Host "Found Cake-generated ZIP: $zipPath"
           # Convert to relative path from workspace root
-          $relativePath = $zipPath.Replace("$PWD\", "")
+          # $PWD is src directory, so we need to add "src/" prefix
+          $relativePath = "src/" + $zipPath.Replace("$PWD\", "").Replace("\", "/")
           echo "zip_path=$relativePath" >> $env:GITHUB_OUTPUT
           echo "zip_name=$zipName" >> $env:GITHUB_OUTPUT
         } else {
