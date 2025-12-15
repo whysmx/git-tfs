@@ -64,12 +64,12 @@ jobs:
     - name: Find GitTfs executable
       id: find_exe
       run: |
-        # Locate the main GitTfs.exe produced by the build
-        $exe = Get-ChildItem -Path "src/GitTfs/bin/${{ env.CONFIGURATION }}/net48" -Filter "GitTfs.exe" -Recurse | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        # Locate the main git-tfs.exe produced by the build
+        $exe = Get-ChildItem -Path "src/GitTfs/bin/${{ env.CONFIGURATION }}/net48" -Filter "git-tfs.exe" -Recurse | Sort-Object LastWriteTime -Descending | Select-Object -First 1
         if (-not $exe) {
-          Write-Host "GitTfs.exe not found under src/GitTfs/bin/${{ env.CONFIGURATION }}/net48"
-          Get-ChildItem -Path "src/GitTfs/bin" -Recurse | Select-String "GitTfs.exe" -ErrorAction SilentlyContinue
-          throw "GitTfs.exe missing"
+          Write-Host "git-tfs.exe not found under src/GitTfs/bin/${{ env.CONFIGURATION }}/net48"
+          Get-ChildItem -Path "src/GitTfs/bin" -Recurse | Select-String "git-tfs.exe" -ErrorAction SilentlyContinue
+          throw "git-tfs.exe missing"
         }
         $relativePath = $exe.FullName.Replace("$PWD\", "")
         echo "exe_path=$relativePath" >> $env:GITHUB_OUTPUT
