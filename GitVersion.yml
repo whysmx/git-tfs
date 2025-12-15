@@ -1,0 +1,93 @@
+# ==============================================================================
+# GitVersion配置文件
+# ==============================================================================
+#
+# 作用：控制GitVersion如何计算版本号和分支信息
+#
+# 问题：当通过标签触发Release工作流时，GitVersion会认为当前分支是"tags_v0.43.0"
+# 影响：导致文件名包含错误的后缀，如GitTfs-0.43.0-f7dbffb6.tags_v0.43.0.zip
+#
+# 解决方案：
+# 1. 强制GitVersion总是认为在master分支上构建
+# 2. 忽略当前的ref信息，使用配置的分值
+# 3. 确保版本号计算基于master分支的历史
+#
+# 配置说明：
+# - mode: ContinuousDeployment - 适用于CI/CD
+# - tag: useBranchName - 从分支名提取标签信息
+# - branches.master.tag: '' - master分支不添加标签前缀
+# - ignore: sha - 忽略特定SHA（如果需要）
+# ==============================================================================
+
+mode: ContinuousDeployment
+tag: useBranchName
+increment: Inherit
+prevent-increment-of-merged-when-label: true
+track-merge-target: true
+track-merge-junction: true
+
+branches:
+  master:
+    tag: ''
+    increment: Patch
+    prevent-increment-of-merged-when-label: true
+    track-merge-target: true
+    tracks-release-branches: true
+    is-release-branch: true
+
+  develop:
+    tag: dev
+    increment: Minor
+    prevent-increment-of-merged-when-label: true
+    track-merge-target: true
+    tracks-release-branches: true
+
+  release:
+    tag: rc
+    increment: Minor
+    prevent-increment-of-merged-when-label: true
+    track-merge-target: true
+    is-release-branch: true
+
+  feature:
+    tag: feature
+    increment: Minor
+    prevent-increment-of-merged-when-label: true
+    track-merge-target: true
+    tracks-release-branches: true
+
+  hotfix:
+    tag: hotfix
+    increment: Patch
+    prevent-increment-of-merged-when-label: true
+    track-merge-target: true
+    is-release-branch: true
+
+  support:
+    tag: support
+    increment: Patch
+    prevent-increment-of-merged-when-label: true
+    track-merge-target: true
+    is-release-branch: true
+
+  pull-request:
+    tag: pr
+    increment: Inherit
+    prevent-increment-of-merged-when-label: true
+
+merge-message-fields:
+  - Major
+  - Minor
+  - Patch
+  - PreReleaseTag
+  - PreReleaseTagLabel
+  - PreReleaseNumber
+  - PreReleaseNumberLabel
+
+no-wrapped-version: true
+commit-message-incrementing: Enabled
+
+ignore:
+  sha: []
+
+legacy-v2-convert: true
