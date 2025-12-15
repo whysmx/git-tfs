@@ -71,7 +71,7 @@ jobs:
           Get-ChildItem -Path "src/GitTfs/bin" -Recurse | Select-String "GitTfs.exe" -ErrorAction SilentlyContinue
           throw "GitTfs.exe missing"
         }
-        $relativePath = $exe.FullName.Replace("$PWD\", "").Replace("src\", "")
+        $relativePath = $exe.FullName.Replace("$PWD\", "")
         echo "exe_path=$relativePath" >> $env:GITHUB_OUTPUT
         echo "exe_name=$($exe.Name)" >> $env:GITHUB_OUTPUT
       shell: pwsh
@@ -87,7 +87,7 @@ jobs:
           $zipName = $zipFiles[0].Name
           Write-Host "Found Cake-generated ZIP: $zipPath"
           # Convert to relative path from workspace root
-          $relativePath = $zipPath.Replace("$PWD\", "").Replace("src\", "")
+          $relativePath = $zipPath.Replace("$PWD\", "")
           echo "zip_path=$relativePath" >> $env:GITHUB_OUTPUT
           echo "zip_name=$zipName" >> $env:GITHUB_OUTPUT
         } else {
